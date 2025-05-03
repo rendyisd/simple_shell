@@ -136,6 +136,7 @@ int parse_cmd(char *buf)
 {
     char **tokens = tokenize_cmd(buf);
 
+    // TODO: Remove below and start from here
     while (*tokens) {
         size_t len_s = strlen(*tokens);
         write(1, *tokens, len_s);
@@ -153,6 +154,4 @@ int main()
 
     get_cmd(buf, (size_t)BUF_SIZE);
     parse_cmd(buf);
-    
-    write(1, buf, strlen(buf));
 }
