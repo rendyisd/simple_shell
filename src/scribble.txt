@@ -1,0 +1,3 @@
+Simple Shell:
+- Accept a line of input
+- Arguments are separated by white spaces

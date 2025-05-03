@@ -1,2 +1,2 @@
-# simple_shell
+# Simpel Shell
 A simple shell.
