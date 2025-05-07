@@ -1,3 +1,4 @@
+.cache/
 build/
 scribble.md
 compile_commands.json
