@@ -1,111 +1,43 @@
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-typedef unsigned long uint64_t;
+#include "sh.h"
 
-typedef unsigned long size_t; // 64-bit arch
-
-#define NULL ((void *)0)
-
-int write(int, const void *, int);
-int read(int, const void *, int);
-void *malloc(size_t); // TODO: Try reimplementing malloc?
-void *realloc(void *, size_t); 
-void free(void *);
-
-size_t strlen(const char *s)
-{
-    size_t c = 0;
-    while (s[c])
-        ++c;
-
-    return c;
-}
-
-char *strchr(const char *s, char c)
-{
-    size_t i = 0;
-    while (s[i]) {
-        if (s[i] == c)
-            return (char *) s+i;
-
-        ++i;
-    }
-    return NULL;
-}
-
-char *strdup(const char *s)
-{
-    size_t len_s = strlen(s);
-    if (len_s == 0) 
-        return NULL;
-
-    char *s_dup = malloc(len_s * sizeof(char) + 1);
-    if (!s_dup)
-        return NULL;
-
-    size_t i = 0;
-    while (s[i]) {
-        s_dup[i] = s[i];
-        ++i;
-    }
-    s_dup[i] = '\0';
-
-    return s_dup;
-}
-
-char *strndup(const char *s, size_t n)
-{
-    // Copy at most n byte of s
-    size_t i = 0;
-    while (s[i] && i < n) 
-        ++i;
-
-    char *s_dup = malloc(i * sizeof(char) + 1);
-    if (!s_dup)
-        return NULL;
-
-    for (int j = 0; j < i; ++j)
-        s_dup[j] = s[j];
-
-    s_dup[i] = '\0';
-
-    return s_dup;
-}
-
-int get_cmd(char *buf, size_t count)
+int get_cmd(char **buf)
 {
     write(2, "> ", 2);
 
-    int c = read(0, buf, count);
+    ssize_t length = readline(buf, stdin);
+    printf("%zd\n", length);
 
-    buf[c] = '\0';
+    if (length == -1) {
+        perror("readline");
+        return -1;
+    }
 
     return 0;
 }
 
-char whitespaces[] = " \t\r\n\v";
-char **tokenize_cmd(char *buf)
+char *whitespaces = " \t\r\n\v";
+char **tokenize_cmd(const char *buf)
 { 
     char **argv = 0; // How many strings,  how many characters in each string
 
     size_t string_counter = 0;
     size_t char_counter = 0;
 
-    char *s_start = 0;
+    const char *s_start = 0;
     
-    size_t buf_len = strlen(buf);
+    size_t buf_len = my_strlen(buf);
     for (size_t i = 0; i < buf_len; ++i) {
-        if (strchr(whitespaces, buf[i])) {
+        if (my_strchr(whitespaces, buf[i])) {
             if (char_counter != 0) {
                 ++string_counter;
 
-                char **temp_argv = realloc(argv, (string_counter) * sizeof(char *));
-                char *temp_args = strndup(s_start, char_counter);
-                if (!temp_argv || !temp_args) {
-                    free(temp_argv);
-                    free(temp_args);
+                char **temp_argv = wrap_realloc(argv, (string_counter) * sizeof(char *));
+                if (!temp_argv)
+                    return NULL;
 
+                char *temp_args = my_strndup(s_start, char_counter);
+                if (!temp_args) {
+                    free(temp_argv);
                     return NULL;
                 }
                 
@@ -122,9 +54,7 @@ char **tokenize_cmd(char *buf)
         }
     }
 
-    char **temp_argv = realloc(argv, (string_counter + 1) * sizeof(char *));
-    if (!temp_argv)
-        free(temp_argv);
+    char **temp_argv = wrap_realloc(argv, (string_counter + 1) * sizeof(char *));
     
     argv = temp_argv;
     argv[string_counter] = 0; // Null terminate argv
@@ -132,16 +62,30 @@ char **tokenize_cmd(char *buf)
     return argv;
 }
 
-int parse_cmd(char *buf)
+// TODO: For now, return a vector of string
+char **parse_cmd(const char *buf)
 {
     char **tokens = tokenize_cmd(buf);
 
-    // TODO: Remove below and start from here
-    while (*tokens) {
-        size_t len_s = strlen(*tokens);
-        write(1, *tokens, len_s);
-        write(1, "\n", 1);
-        ++tokens;
+    // Parsing should be done here
+
+    return tokens;
+}
+
+// TODO: For now, simplest command execution
+int exec_cmd(char **tokens)
+{
+    char *prog_name = tokens[0];
+    char **argv = &tokens[1];
+
+    int prog_pid = fork();
+
+    if (prog_pid < 0) {
+        return 1;
+    } else if (prog_pid == 0) {
+        execvp(prog_name, argv);
+    } else {
+        wait(NULL);
     }
 
     return 0;
@@ -149,9 +93,18 @@ int parse_cmd(char *buf)
 
 int main()
 {
-#define BUF_SIZE 100
-    char buf[BUF_SIZE];
+    char *buf = NULL;
 
-    get_cmd(buf, (size_t)BUF_SIZE);
-    parse_cmd(buf);
+    get_cmd(&buf);
+
+    printf("%s\n", buf);
+
+    char **tokens = parse_cmd(buf);
+
+    for (char **token = tokens; *token; ++token) {
+        printf("| %s |", *token);
+    }
+    //if (exec_cmd(parse_cmd(buf)) == 1) {
+    //    printf("Something went wrong!\n");
+    //}
 }

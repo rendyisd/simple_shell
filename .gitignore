@@ -1,4 +1,6 @@
 build/
+scribble.md
+compile_commands.json
 
 # Prerequisites
 *.d

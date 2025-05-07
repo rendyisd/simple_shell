@@ -1,8 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g
 
-SRCS = sh.c
-SRCS_PATH = $(addprefix src/,$(SRCS))
+SRCS = sh.c utils.c
 OBJS_PATH = $(addprefix build/,$(SRCS:.c=.o))
 TARGET = build/sh
 
@@ -14,7 +13,7 @@ build/:
 $(TARGET): $(OBJS_PATH)
 	$(CC) $(CFLAGS) -o $@ $^
 
-$(OBJS_PATH): $(SRCS_PATH) | build/
+build/%.o: src/%.c | build/
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
