@@ -1,21 +1,24 @@
 #include "sh.h"
 
-int get_cmd(char **buf)
+char *get_cmd()
 {
+    char *buf = NULL;
+
     write(2, "> ", 2);
 
-    ssize_t length = readline(buf, stdin);
+    ssize_t length = readline(&buf, stdin);
     printf("%zd\n", length);
 
     if (length == -1) {
+        free(buf); // Just in case
         perror("readline");
-        return -1;
+        return NULL;
     }
 
-    return 0;
+    return buf;
 }
 
-char *whitespaces = " \t\r\n\v";
+const char *whitespaces = " \t\r\n\v";
 char **tokenize_cmd(const char *buf)
 { 
     char **argv = 0; // How many strings,  how many characters in each string
@@ -93,12 +96,7 @@ int exec_cmd(char **tokens)
 
 int main()
 {
-    char *buf = NULL;
-
-    get_cmd(&buf);
-
-    printf("%s\n", buf);
-
+    char *buf = get_cmd();
     char **tokens = parse_cmd(buf);
 
     for (char **token = tokens; *token; ++token) {
