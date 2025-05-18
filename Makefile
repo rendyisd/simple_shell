@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g
 
-SRCS = sh.c utils.c
+SRCS = sh.c utils.c tokenizer.c
 OBJS_PATH = $(addprefix build/,$(SRCS:.c=.o))
 TARGET = build/sh
 

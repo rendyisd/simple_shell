@@ -1,63 +1,17 @@
+#include <stdarg.h>
 #include "sh.h"
 
-size_t my_strlen(const char *s)
+void die(const char *fmt, ...)
 {
-    size_t c = 0;
-    while (s && s[c])
-        ++c;
+    va_list args;
+    va_start(args, fmt);
 
-    return c;
-}
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
 
-char *my_strchr(const char *s, char c)
-{
-    size_t i = 0;
-    while (s && s[i]) {
-        if (s[i] == c)
-            return (char *) s+i;
-
-        ++i;
-    }
-    return NULL;
-}
-
-char *my_strdup(const char *s)
-{
-    size_t len_s = my_strlen(s);
-    if (len_s == 0) 
-        return NULL;
-
-    char *s_dup = wrap_malloc(len_s * sizeof(char) + 1);
-    if (!s_dup)
-        return NULL;
-
-    size_t i = 0;
-    while (s[i]) {
-        s_dup[i] = s[i];
-        ++i;
-    }
-    s_dup[i] = '\0';
-
-    return s_dup;
-}
-
-char *my_strndup(const char *s, size_t n)
-{
-    // Copy at most n byte of s
-    size_t i = 0;
-    while (s[i] && i < n) 
-        ++i;
-
-    char *s_dup = wrap_malloc(i * sizeof(char) + 1);
-    if (!s_dup)
-        return NULL;
-
-    for (size_t j = 0; j < i; ++j)
-        s_dup[j] = s[j];
-
-    s_dup[i] = '\0';
-
-    return s_dup;
+    va_end(args);
+    exit(EXIT_FAILURE);
 }
 
 ssize_t readline(char **line_buf, FILE *fp)
@@ -75,13 +29,13 @@ ssize_t readline(char **line_buf, FILE *fp)
             return -1;
         }
 
-        size_t tmpbuf_len = my_strlen(tmpbuf);
+        size_t tmpbuf_len = strlen(tmpbuf);
 
         if ((tmpbuf_len > 0 && (tmpbuf[tmpbuf_len - 1] == '\n' || tmpbuf[tmpbuf_len - 1] == '\r')) || feof(fp))
             is_newline = 1;
 
         if (tmpbuf_len > 0) {
-            char *new_buf = wrap_realloc(buf, total_buf_len + tmpbuf_len + 1); // +1 null terminator
+            char *new_buf = realloc(buf, total_buf_len + tmpbuf_len + 1); // +1 null terminator
             if (!new_buf) {
                 free(buf);
                 *line_buf = NULL;
@@ -101,26 +55,52 @@ ssize_t readline(char **line_buf, FILE *fp)
     return total_buf_len;
 }
 
-void *wrap_malloc(size_t size)
-{
-    void *ret = malloc(size);
+/* Separate null terminated string on whitespaces
+ * Currently not needed, just in case
+char **tokenize_cmd(const char *buf)
+{ 
+    char **argv = 0; // How many strings,  how many characters in each string
 
-    if (!ret) {
-        perror("wrap_malloc");
-        return NULL;
+    size_t string_counter = 0;
+    size_t char_counter = 0;
+
+    const char *s_start = 0;
+    
+    size_t buf_len = strlen(buf);
+    for (size_t i = 0; i < buf_len; ++i) {
+        if (strchr(whitespaces, buf[i])) {
+            if (char_counter != 0) {
+                ++string_counter;
+
+                char **temp_argv = wrap_realloc(argv, (string_counter) * sizeof(char *));
+                if (!temp_argv)
+                    return NULL;
+
+                char *temp_args = strndup(s_start, char_counter);
+                if (!temp_args) {
+                    free(temp_argv);
+                    return NULL;
+                }
+                
+                argv = temp_argv;
+                argv[string_counter - 1] = temp_args;
+
+                char_counter = 0;
+            }
+        } else {
+            if (char_counter == 0)
+                s_start = &buf[i];
+
+            ++char_counter;
+        }
     }
 
-    return ret;
+    char **temp_argv = wrap_realloc(argv, (string_counter + 1) * sizeof(char *));
+    
+    argv = temp_argv;
+    argv[string_counter] = 0; // Null terminate argv
+
+    return argv;
 }
 
-void *wrap_realloc(void *ptr, size_t size)
-{
-    void *ret = realloc(ptr, size);
-
-    if (!ret) {
-        perror("wrap_realloc");
-        return NULL;
-    }
-
-    return ret;
-}
+*/
