@@ -1,4 +1,7 @@
-// Is this lexer or tokenizer or they're basically the same thing?
+/* 
+ * Is this lexer or tokenizer or they're basically the same thing? 
+ * */
+
 #include <ctype.h>
 #include "sh.h"
 
@@ -45,10 +48,8 @@ int token_concat(struct token *token_buf, const char *s, size_t len)
     if (len > avail_mem) {
         char *tmp = realloc(token_buf->value, token_buf->cap + TOKEN_HEAP_SIZE);
 
-        if (!tmp) {
-            free(token_buf->value);
-            die("Realloc failed");
-        }
+        if (!tmp)
+            die("token_concat; realloc failed");
 
         token_buf->value = tmp;
         token_buf->cap += TOKEN_HEAP_SIZE;
@@ -98,13 +99,35 @@ transition_func_t * const transition_table[ NUM_STATE ][ NUM_INPUT_T ] = {
 
 enum tokenizer_state tf_default_alphanum(char c, struct tokenizer_ctx *ctx)
 {
+    token_concat(ctx->curr_token, &c, 1);
+
     return STATE_IN_WORD;
+}
+
+void ctx_flush(struct tokenizer_ctx* ctx)
+{
+    size_t i = 0;
+    while (ctx->tokens[i])
+        ++i;
+
+    struct token **tmp = realloc(ctx->tokens, (i + 1 + 1) * sizeof(struct token*));
+    if (!tmp)
+        die("ctx_flush; realloc failed");
+    
+    ctx->tokens = tmp;
+
+    /* 
+     * - Move ownership of curr_token into tokens 
+     * - Make a new token for curr_token
+     */
+    ctx->tokens[i] = ctx->curr_token;
+    ctx->tokens[i + 1] = NULL; 
+    ctx->curr_token = token_new();
 }
 
 struct token **tokenize(const char *buf)
 {
-    // TODO: IMPLEMENT DYNAMIC ARRAY OR SOMETHING FFS
-    struct token **tokens = malloc(TOKEN_HEAP_SIZE * sizeof(struct token*));
+    struct token **tokens = malloc(1 * sizeof(struct token*));
     tokens[0] = NULL;
 
     struct tokenizer_ctx ctx = {
@@ -140,6 +163,8 @@ struct token **tokenize(const char *buf)
 
         ++i;
     }
+
+    token_destroy(ctx.curr_token);
 
     return tokens;
 }
